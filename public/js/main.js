@@ -203,15 +203,92 @@ function getCoordinates()
   return {chromosome: chromosome, start: start, end: end};
 }
 
+// # --------------------------------------
+// # LOADING DATA FROM DIFFERENT SOURCES
+// # csv or database
+// # --------------------------------------
+var DATA_MODES = {
+  file: load_csv_data_nodes_links,
+  database: load_database_data
+};
+var data_mode = 'file';
 
 
-// GET DATA
+// d1 reading multiple files
+const FILE_NODES = "../data/nodes.csv";
+const FILE_LINKS = "../data/links.csv";
 
-function getData(parameters)
-{
-  forceSimulation.stop();
-  graphView.clear();
+function get_csv_files(file_nodes, file_links) {
+  // For tests
+  d3.queue()
+    .defer(d3.csv, file_nodes)
+    .defer(d3.csv, file_links)
+    .await(analyze);
 
+  function analyze(error, nodes, links) {
+    if(error) { console.log(error); }
+    // console.log( {nodes: nodes, links: links});
+    return {nodes: nodes, links: links};
+  }
+}
+
+function get_default_parameters() {
+  // For tests
+  return {
+      chromosome: "10",
+      end: 101480000,
+      level: 1,
+      start: 101470000
+    };
+}
+
+function load_csv_data_nodes_links(file_nodes, file_links, parameters=null) {
+  load_csv_data_nodes(file_nodes, parameters);
+  load_csv_data_links(file_links, parameters);
+}
+
+function load_csv_data_nodes(filename, parameters) {
+  var id = 0;
+  d3.csv(filename)
+    .row(function(d) {
+          return {
+                 // id: id++,
+                 id: String(d.chromosome + d.start + d.end),
+                 chromosome: d.chromosome,
+                 start: d.start,
+                 end: d.end
+
+      };;
+    })
+    .get(function(d) {
+      console.log("data nodes:");
+      console.log({nodes: d});
+      updateGraph({nodes: d});
+      renderGraph(parameters);
+    });
+}
+
+function load_csv_data_links(filename, parameters) {
+  var id = 0;
+  d3.csv(filename)
+    .row(function(d) {
+          return {
+              id: id++,
+              source: String(d.sourceChromosome + d.sourceStart + d.sourceEnd),
+              target: String(d.targetChromosome + d.targetStart + d.targetEnd),
+              type: d.type,
+              value: d.value
+      };;
+    })
+    .get(function(d) {
+      console.log("data links:");
+      console.log({ nodes: [{}], links: d});
+      updateGraph({ nodes: [{}], links: d});
+      renderGraph(parameters);
+    });
+}
+
+function load_database_data(parameters) {
   d3.request("http://localhost:3000/query")
     .header("Content-Type", "application/json")
     .mimeType("application/json")
@@ -226,18 +303,33 @@ function getData(parameters)
           updateGraph(res);
           renderGraph(parameters);
         }
-        d3.selectAll('input,button').attr('disabled', null);
     });
 }
 
+// GET DATA
+function getData(parameters)
+{
+  console.log("parameters");
+  console.log(parameters);
+  forceSimulation.stop();
+  graphView.clear();
 
+  if(data_mode === "file") {
+    load_csv_data_nodes_links(
+      FILE_NODES+"_h1000",
+      FILE_LINKS+"_h90",
+      parameters=parameters
+    );
+  } else if (data_mode === "database") {
+    load_database_data(parameters=parameters)
+  }
+  d3.selectAll('input,button').attr('disabled', null);
+}
 
 // UPDATE GRAPH
-
 function updateGraph(data)
 {
   if(data.nodes == null) return;
-
   for(i = 0; i < data.nodes.length; ++i)
   {
     let node = data.nodes[i];

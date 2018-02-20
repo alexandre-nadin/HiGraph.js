@@ -309,28 +309,34 @@ function load_database_data(parameters) {
 // GET DATA
 function getData(parameters)
 {
-  console.log("parameters");
-  console.log(parameters);
   forceSimulation.stop();
   graphView.clear();
 
   if(data_mode === "file") {
+    console.log("Rendering from file");
     load_csv_data_nodes_links(
-      FILE_NODES+"_h1000",
-      FILE_LINKS+"_h90",
-      parameters=parameters
+      FILE_NODES,
+      FILE_LINKS,
+      parameters
     );
   } else if (data_mode === "database") {
-    load_database_data(parameters=parameters)
+    console.log("Rendering from database");
+    load_database_data(parameters)
+  } else {
+    console.log("No rendering mode found for '", data_mode, "'");
+    return null;
   }
   d3.selectAll('input,button').attr('disabled', null);
 }
 
+function graphview_addnode() {
+  return
+}
 // UPDATE GRAPH
 function updateGraph(data)
 {
   if(data.nodes == null) return;
-  for(i = 0; i < data.nodes.length; ++i)
+  for(var i = 0; i < data.nodes.length; ++i)
   {
     let node = data.nodes[i];
     let id = node.id;
@@ -382,6 +388,15 @@ function renderGraph(parameters)
     .attr("transform", currentTransform)
     .attr("stroke-width", 2/currentTransform.k)
     .merge(linkSelection);
+
+  // Reset the nodes and links
+  svgSelection.selectAll("circle").remove()
+  svgSelection.selectAll(".node").remove()
+  nodeSelection = svgSelection.selectAll(".node");
+
+  svgSelection.selectAll("line").remove()
+  svgSelection.selectAll(".link").remove()
+  linkSelection = svgSelection.selectAll(".link");
 
   // Apply the general update pattern to the nodes.
   nodeSelection = nodeSelection.data(graphView.nodes, d => d.id);

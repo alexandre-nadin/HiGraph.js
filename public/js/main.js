@@ -330,9 +330,18 @@ function renderGraph(parameters) {
   let start = parameters.start;
   let end = parameters.end;
 
+  // Reset the nodes
+  svgSelection.selectAll("circle").remove()
+  svgSelection.selectAll(".node").remove()
+  nodeSelection = svgSelection.selectAll(".node");
+
+  // Reset the links
+  svgSelection.selectAll("line").remove()
+  svgSelection.selectAll(".link").remove()
+  linkSelection = svgSelection.selectAll(".link");
+
   graphView.updateRoot(chromosome, start, end);
   graphView.setColors();
-
   graphView.root.fx = width/2;
   graphView.root.fy = height/2;
 
@@ -348,15 +357,6 @@ function renderGraph(parameters) {
     .attr("transform", currentTransform)
     .attr("stroke-width", 2/currentTransform.k)
     .merge(linkSelection);
-
-  // Reset the nodes and links
-  svgSelection.selectAll("circle").remove()
-  svgSelection.selectAll(".node").remove()
-  nodeSelection = svgSelection.selectAll(".node");
-
-  svgSelection.selectAll("line").remove()
-  svgSelection.selectAll(".link").remove()
-  linkSelection = svgSelection.selectAll(".link");
 
   // Apply the general update pattern to the nodes.
   nodeSelection = nodeSelection.data(graphView.nodes, d => d.id);

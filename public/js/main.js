@@ -188,20 +188,7 @@ var data_mode = 'file';
 const FILE_NODES = "../data/nodes.csv";
 const FILE_LINKS = "../data/links.csv";
 
-function get_csv_files(file_nodes, file_links) {
-  // For tests
-  d3.queue()
-    .defer(d3.csv, file_nodes)
-    .defer(d3.csv, file_links)
-    .await(analyze);
-
-  function analyze(error, nodes, links) {
-    if(error) { console.log(error); }
-    // console.log( {nodes: nodes, links: links});
-    return {nodes: nodes, links: links};
-  }
-}
-
+getData(get_default_parameters())
 function get_default_parameters() {
   // For tests
   return {
@@ -212,28 +199,23 @@ function get_default_parameters() {
     };
 }
 
-function load_csv_data_links_generalized(filename, parameters) {
-  var id = 0;
-  d3.csv(filename)
-    .row(function(d) {
-          return {
-              id: id++,
-              source: String(d.sourceChromosome + d.sourceStart + d.sourceEnd),
-              target: String(d.targetChromosome + d.targetStart + d.targetEnd),
-              type: d.type,
-              value: d.value
-      };;
-    })
-    .get(function(d) {
-      updateGraph({ nodes: [{}], links: d});
-      renderGraph(parameters);
-    });
+function load_csv_data_nodes_links(file_nodes, file_links, parameters=null) {
+  d3.queue()
+    .defer(d3.csv, file_nodes)
+    .defer(d3.csv, file_links)
+    .await(process_csv_nodes_links(parameters));
 }
 
-function load_csv_data_nodes_links(file_nodes, file_links, parameters=null) {
-  load_csv_data_nodes(file_nodes, parameters);
-  load_csv_data_links(file_links, parameters);
-  // load_csv_data_links_generalized(file_links, parameters);
+function process_csv_nodes_links(parameters) {
+  return function (error, nodes, links) {
+    var linkid = 0
+    if(error) { console.log(error); }
+    updateGraph({
+      nodes: nodes.map(x => format_csv_data_node(x)),
+      links: links.map(x => format_csv_data_link(x, linkid++))
+    })
+    renderGraph(parameters)
+  }
 }
 
 function format_csv_data_node(d, id=null) {
@@ -245,15 +227,6 @@ function format_csv_data_node(d, id=null) {
   }
 }
 
-function load_csv_data_nodes(filename, parameters) {
-  d3.csv(filename)
-    .row(d => format_csv_data_node(d))
-    .get(function(d) {
-      updateGraph({nodes: d})
-      renderGraph(parameters);
-    });
-}
-
 function format_csv_data_link(d, id=null) {
   return {
     id: id,
@@ -262,16 +235,6 @@ function format_csv_data_link(d, id=null) {
     type: d.type,
     value: d.value
   }
-}
-
-function load_csv_data_links(filename, parameters) {
-  var id = 0;
-  d3.csv(filename)
-    .row(d => format_csv_data_link(d, id++))
-    .get(function(d) {
-      updateGraph({ nodes: [{}], links: d});
-      renderGraph(parameters);
-    });
 }
 
 function load_database_data(parameters) {

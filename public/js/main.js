@@ -35,7 +35,7 @@ const heatmapSelection = containerSelection.append("div")
 
 const zoom = d3.zoom()
   .wheelDelta(myDelta)
-  .on("zoom", zoom_actions);
+  .on("zoom", zoomActions);
 
 const scale = 0.85;
 const width = +containerSelection.attr("width");
@@ -70,7 +70,7 @@ function myDelta() {
 }
 
 // ZOOM ACTIONS
-function zoom_actions() {
+function zoomActions() {
   linkSelection.attr("transform", d3.event.transform);
   nodeSelection.attr("transform", d3.event.transform);
   linkSelection.attr("stroke-width", 2/d3.event.transform.k);
@@ -178,18 +178,18 @@ function getCoordinates() {
 // # LOADING DATA FROM DIFFERENT SOURCES
 // # csv or database
 // # --------------------------------------
-var DATA_MODES = {
-  file: load_csv_data_nodes_links,
-  database: load_database_data
+const DATA_MODES = {
+  file: loadCsvDataNodesLinks,
+  database: loadDatabaseData
 };
-var data_mode = 'file';
+var dataMode = 'file';
 
 // d1 reading multiple files
 const FILE_NODES = "../data/nodes.csv";
 const FILE_LINKS = "../data/links.csv";
 
-getData(get_default_parameters())
-function get_default_parameters() {
+getData(getDefaultParameters())
+function getDefaultParameters() {
   // For tests
   return {
       chromosome: "10",
@@ -199,26 +199,26 @@ function get_default_parameters() {
     };
 }
 
-function load_csv_data_nodes_links(file_nodes, file_links, parameters=null) {
+function loadCsvDataNodesLinks(fileNodes, fileLinks, parameters=null) {
   d3.queue()
-    .defer(d3.csv, file_nodes)
-    .defer(d3.csv, file_links)
-    .await(process_csv_nodes_links(parameters));
+    .defer(d3.csv, fileNodes)
+    .defer(d3.csv, fileLinks)
+    .await(processCsvNodesLinks(parameters));
 }
 
-function process_csv_nodes_links(parameters) {
+function processCsvNodesLinks(parameters) {
   return function (error, nodes, links) {
-    var linkid = 0
+    var linkId = 0
     if(error) { console.log(error); }
     updateGraph({
-      nodes: nodes.map(x => format_csv_data_node(x)),
-      links: links.map(x => format_csv_data_link(x, linkid++))
+      nodes: nodes.map(x => formatCsvDataNode(x)),
+      links: links.map(x => formatCsvDataLink(x, linkId++))
     })
     renderGraph(parameters)
   }
 }
 
-function format_csv_data_node(d, id=null) {
+function formatCsvDataNode(d, id=null) {
   return {
     id: String(d.chromosome + d.start + d.end),
     chromosome: d.chromosome,
@@ -227,7 +227,7 @@ function format_csv_data_node(d, id=null) {
   }
 }
 
-function format_csv_data_link(d, id=null) {
+function formatCsvDataLink(d, id=null) {
   return {
     id: id,
     source: String(d.sourceChromosome + d.sourceStart + d.sourceEnd),
@@ -237,7 +237,7 @@ function format_csv_data_link(d, id=null) {
   }
 }
 
-function load_database_data(parameters) {
+function loadDatabaseData(parameters) {
   d3.request("http://localhost:3000/query")
     .header("Content-Type", "application/json")
     .mimeType("application/json")
@@ -257,18 +257,18 @@ function getData(parameters) {
   forceSimulation.stop();
   graphView.clear();
 
-  if(data_mode === "file") {
+  if(dataMode === "file") {
     console.log("Rendering from file");
-    load_csv_data_nodes_links(
+    loadCsvDataNodesLinks(
       FILE_NODES,
       FILE_LINKS,
       parameters
     );
-  } else if (data_mode === "database") {
+  } else if (dataMode === "database") {
     console.log("Rendering from database");
-    load_database_data(parameters)
+    loadDatabaseData(parameters)
   } else {
-    console.log("No rendering mode found for '", data_mode, "'");
+    console.log("No rendering mode found for '", dataMode, "'");
     return null;
   }
   d3.selectAll('input,button').attr('disabled', null);
@@ -333,9 +333,9 @@ function renderGraph(parameters) {
     .attr("transform", currentTransform)
     .attr("r", 8/currentTransform.k)
     .attr("stroke-width", 1/currentTransform.k)
-    .on("mouseover", node_over_actions)
-    .on("mouseout", node_out_actions)
-    .on("click", node_click_actions)
+    .on("mouseover", nodeOverActions)
+    .on("mouseout", nodeOutActions)
+    .on("click", nodeClickActions)
     .merge(nodeSelection);
 
     // Update and restart the simulation.
@@ -345,7 +345,7 @@ function renderGraph(parameters) {
 }
 
 // NODE OVER ACTIONS
-function node_over_actions(node) {
+function nodeOverActions(node) {
   tooltip.transition()
     .duration(200)
     .style("opacity", .9);
@@ -356,14 +356,14 @@ function node_over_actions(node) {
 }
 
 // NODE OUT ACTIONS
-function node_out_actions(node) {
+function nodeOutActions(node) {
   tooltip.transition()
     .duration(200)
     .style("opacity", 0);
 }
 
 // NODE CLICK ACTIONS
-function node_click_actions(node) {
+function nodeClickActions(node) {
   getData({ chromosome: node.chromosome,
             start: node.start,
             end: node.end,

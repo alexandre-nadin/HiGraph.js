@@ -64,20 +64,13 @@ const forceSimulation = d3.forceSimulation(graphView.nodes)
   .force("center", d3.forceCenter(width / 2, height / 2))
   .on("tick", tickActions);
 
-
-
 // MY DELTA
-
 function myDelta() {
   return -d3.event.deltaY * (d3.event.deltaMode ? 120 : 1) / 6000;
 }
 
-
-
 // ZOOM ACTIONS
-
-function zoom_actions()
-{
+function zoom_actions() {
   linkSelection.attr("transform", d3.event.transform);
   nodeSelection.attr("transform", d3.event.transform);
   linkSelection.attr("stroke-width", 2/d3.event.transform.k);
@@ -89,15 +82,12 @@ function zoom_actions()
 
 
 // GO
-
-function go()
-{
+function go() {
   d3.selectAll("input,button").attr("disabled", true);
 
   let parameters = getCoordinates();
 
-  if(!parameters)
-  {
+  if(!parameters) {
     window.alert("Wrong coordinates");
     d3.selectAll("input,button").attr("disabled", null);
     return;
@@ -112,16 +102,11 @@ function go()
   getData(parameters);
 }
 
-
-
 // REFRESH
-
-function refresh()
-{
+function refresh() {
   d3.selectAll("input,button").attr("disabled", true);
 
-  if(graphView.root == null)
-  {
+  if(graphView.root == null) {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
@@ -137,16 +122,11 @@ function refresh()
   getData(parameters);
 }
 
-
-
 // ZOOM IN
-
-function decreaseLevel()
-{
+function decreaseLevel() {
   d3.selectAll("input,button").attr("disabled", true);
 
-  if(graphView.level == 0 || graphView.root == null)
-  {
+  if ( graphView.level == 0 || graphView.root == null) {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
@@ -162,16 +142,11 @@ function decreaseLevel()
   getData(parameters);
 }
 
-
-
 // ZOOM OUT
-
-function increaseLevel()
-{
+function increaseLevel() {
   d3.selectAll("input,button").attr("disabled", true);
 
-  if(graphView.root == null)
-  {
+  if(graphView.root == null) {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
@@ -187,12 +162,8 @@ function increaseLevel()
   getData(parameters);
 }
 
-
-
 // GET PARAMETERS
-
-function getCoordinates()
-{
+function getCoordinates() {
   let input  = d3.select("#coordinates").property("value");
   if(!inputRegex.test(input)) return null;
   let coordinates = input.split(/:|-/);
@@ -212,7 +183,6 @@ var DATA_MODES = {
   database: load_database_data
 };
 var data_mode = 'file';
-
 
 // d1 reading multiple files
 const FILE_NODES = "../data/nodes.csv";
@@ -252,11 +222,22 @@ function load_csv_data_nodes(filename, parameters) {
   d3.csv(filename)
     .row(function(d) {
           return {
-                 // id: id++,
                  id: String(d.chromosome + d.start + d.end),
                  chromosome: d.chromosome,
                  start: d.start,
                  end: d.end
+      };;
+    })
+    .get(function(d) {
+      // console.log("data nodes:", {nodes: d});
+      // var d = d.filter((node) => node.start == parameters.start);
+      // console.log("data nodes filtered:", {nodes: d});
+      // console.log({nodes: dfiltered})
+      // updateGraph({nodes: dfiltered});
+      updateGraph({nodes: d})
+      renderGraph(parameters);
+    });
+}
 
       };;
     })
@@ -281,8 +262,6 @@ function load_csv_data_links(filename, parameters) {
       };;
     })
     .get(function(d) {
-      console.log("data links:");
-      console.log({ nodes: [{}], links: d});
       updateGraph({ nodes: [{}], links: d});
       renderGraph(parameters);
     });
@@ -294,12 +273,9 @@ function load_database_data(parameters) {
     .mimeType("application/json")
     .response(xhr => JSON.parse(xhr.responseText))
     .post(JSON.stringify(parameters), (err, res) => {
-        if(res == null)
-        {
+        if(res == null) {
           window.alert("The region is not in the database");
-        }
-        else
-        {
+        } else {
           updateGraph(res);
           renderGraph(parameters);
         }
@@ -307,8 +283,7 @@ function load_database_data(parameters) {
 }
 
 // GET DATA
-function getData(parameters)
-{
+function getData(parameters) {
   forceSimulation.stop();
   graphView.clear();
 
@@ -329,43 +304,21 @@ function getData(parameters)
   d3.selectAll('input,button').attr('disabled', null);
 }
 
-function graphview_addnode() {
-  return
-}
 // UPDATE GRAPH
-function updateGraph(data)
-{
+function updateGraph(data) {
   if(data.nodes == null) return;
-  for(var i = 0; i < data.nodes.length; ++i)
-  {
-    let node = data.nodes[i];
-    let id = node.id;
-    let chromosome = node.chromosome;
-    let start = node.start;
-    let end = node.end;
-    graphView.addNode(id, chromosome, start, end);
-  }
+  data.nodes.forEach(
+    node => graphView.addNode(node.id, node.chromosome, node.start, node.end)
+  );
 
   if(data.links == null) return;
-
-  for(i = 0; i < data.links.length; ++i)
-  {
-    let link = data.links[i];
-    let id = link.id;
-    let source = link.source;
-    let target = link.target;
-    let type = link.type;
-    let value = link.value;
-    graphView.addLink(id, source, target, type, value);
-  }
+  data.links.forEach(
+    x => graphView.addLink(x.id, x.source, x.target, x.type, x.value)
+  );
 }
 
-
-
 // RENDER GRAPH
-
-function renderGraph(parameters)
-{
+function renderGraph(parameters) {
   let chromosome = parameters.chromosome;
   let start = parameters.start;
   let end = parameters.end;
@@ -421,12 +374,8 @@ function renderGraph(parameters)
     forceSimulation.alpha(1).restart();
 }
 
-
-
 // NODE OVER ACTIONS
-
-function node_over_actions(node)
-{
+function node_over_actions(node) {
   tooltip.transition()
     .duration(200)
     .style("opacity", .9);
@@ -436,38 +385,24 @@ function node_over_actions(node)
     .style("top", (d3.event.pageY - 28) + "px");
 }
 
-
-
 // NODE OUT ACTIONS
-
-function node_out_actions(node)
-{
+function node_out_actions(node) {
   tooltip.transition()
     .duration(200)
     .style("opacity", 0);
 }
 
-
-
 // NODE CLICK ACTIONS
-
-function node_click_actions(node)
-{
-  let chromosome = node.chromosome;
-  let start      = node.start;
-  let end        = node.end;
-  let level      = graphView.level;
-  let parameters = {chromosome: chromosome, start: start, end: end, level: level};
-
-  getData(parameters);
+function node_click_actions(node) {
+  getData({ chromosome: node.chromosome,
+            start: node.start,
+            end: node.end,
+            level: node.level
+          })
 }
 
-
-
 // TICK ACTIONS
-
-function tickActions()
-{
+function tickActions() {
   linkSelection
     .attr("x1", d => d.source.x)
     .attr("y1", d => d.source.y)

@@ -212,44 +212,7 @@ function get_default_parameters() {
     };
 }
 
-function load_csv_data_nodes_links(file_nodes, file_links, parameters=null) {
-  load_csv_data_nodes(file_nodes, parameters);
-  load_csv_data_links(file_links, parameters);
-}
-
-function load_csv_data_nodes(filename, parameters) {
-  var id = 0;
-  d3.csv(filename)
-    .row(function(d) {
-          return {
-                 id: String(d.chromosome + d.start + d.end),
-                 chromosome: d.chromosome,
-                 start: d.start,
-                 end: d.end
-      };;
-    })
-    .get(function(d) {
-      // console.log("data nodes:", {nodes: d});
-      // var d = d.filter((node) => node.start == parameters.start);
-      // console.log("data nodes filtered:", {nodes: d});
-      // console.log({nodes: dfiltered})
-      // updateGraph({nodes: dfiltered});
-      updateGraph({nodes: d})
-      renderGraph(parameters);
-    });
-}
-
-      };;
-    })
-    .get(function(d) {
-      console.log("data nodes:");
-      console.log({nodes: d});
-      updateGraph({nodes: d});
-      renderGraph(parameters);
-    });
-}
-
-function load_csv_data_links(filename, parameters) {
+function load_csv_data_links_generalized(filename, parameters) {
   var id = 0;
   d3.csv(filename)
     .row(function(d) {
@@ -261,6 +224,50 @@ function load_csv_data_links(filename, parameters) {
               value: d.value
       };;
     })
+    .get(function(d) {
+      updateGraph({ nodes: [{}], links: d});
+      renderGraph(parameters);
+    });
+}
+
+function load_csv_data_nodes_links(file_nodes, file_links, parameters=null) {
+  load_csv_data_nodes(file_nodes, parameters);
+  load_csv_data_links(file_links, parameters);
+  // load_csv_data_links_generalized(file_links, parameters);
+}
+
+function format_csv_data_node(d, id=null) {
+  return {
+    id: String(d.chromosome + d.start + d.end),
+    chromosome: d.chromosome,
+    start: d.start,
+    end: d.end
+  }
+}
+
+function load_csv_data_nodes(filename, parameters) {
+  d3.csv(filename)
+    .row(d => format_csv_data_node(d))
+    .get(function(d) {
+      updateGraph({nodes: d})
+      renderGraph(parameters);
+    });
+}
+
+function format_csv_data_link(d, id=null) {
+  return {
+    id: id,
+    source: String(d.sourceChromosome + d.sourceStart + d.sourceEnd),
+    target: String(d.targetChromosome + d.targetStart + d.targetEnd),
+    type: d.type,
+    value: d.value
+  }
+}
+
+function load_csv_data_links(filename, parameters) {
+  var id = 0;
+  d3.csv(filename)
+    .row(d => format_csv_data_link(d, id++))
     .get(function(d) {
       updateGraph({ nodes: [{}], links: d});
       renderGraph(parameters);

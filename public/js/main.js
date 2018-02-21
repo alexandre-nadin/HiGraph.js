@@ -2,66 +2,65 @@
 // Leggere la sezione "A note on numbers and the Integer type" in fondo al readme.md
 // Verificare se (2^53- 1) e' sufficiente per contenere gli indici dei nucleotidi nei cromosomi
 
-const inputRegex = /^(X|Y|x|y|[0-9]|1[0-9]|2[0-2]):\d+-\d+$/;
+const INPUT_REGEX = /^(X|Y|x|y|[0-9]|1[0-9]|2[0-2]):\d+-\d+$/;
+const CONTAINER_SELECTION = d3.select("#hicviz-container")
 
-const containerSelection = d3.select("#hicviz-container")
-
-const navigationSelection = containerSelection.append("div")
+const NAVIGATION_SELECTION = CONTAINER_SELECTION.append("div")
   .attr("id", "navigation");
 
-navigationSelection.append("input")
+NAVIGATION_SELECTION.append("input")
   .attr("id", "coordinates")
   .attr("type", "text")
   .attr("placeholder", "chr:start-end (example 10:103765000-103770000)");
-navigationSelection.append("button")
+NAVIGATION_SELECTION.append("button")
   .attr("id", "go-button")
   .html("Go")
   .on("click", go);
-navigationSelection.append("button")
+NAVIGATION_SELECTION.append("button")
   .attr("id", "zoom-out-button")
   .html("Zoom-Out")
   .on("click", increaseLevel);
-navigationSelection.append("button")
+NAVIGATION_SELECTION.append("button")
   .attr("id", "zoom-in-button")
   .html("Zoom-In")
   .on("click", decreaseLevel);
-navigationSelection.append("button")
+NAVIGATION_SELECTION.append("button")
   .attr("id", "refresh-button")
   .html("Refresh")
   .on("click", refresh);
 
-const heatmapSelection = containerSelection.append("div")
+const HEATMAP_SELECTION = CONTAINER_SELECTION.append("div")
   .attr("id", "heatmap");
 
-const zoom = d3.zoom()
+const ZOOM = d3.zoom()
   .wheelDelta(myDelta)
   .on("zoom", zoomActions);
 
-const scale = 0.85;
-const width = +containerSelection.attr("width");
-const height = +containerSelection.attr("height") * scale;
+const SCALE = 0.85;
+const WIDTH = +CONTAINER_SELECTION.attr("width");
+const HEIGHT = +CONTAINER_SELECTION.attr("height") * SCALE;
 
-const svgSelection = containerSelection.append("svg")
+const SVG_SELECTION = CONTAINER_SELECTION.append("svg")
   .attr("id", "graph-container")
-  .attr("width", width)
-  .attr("height", height)
-  .call(zoom);
+  .attr("width", WIDTH)
+  .attr("height", HEIGHT)
+  .call(ZOOM);
 
 let currentTransform = d3.zoomIdentity;
 
-let linkSelection = svgSelection.append("g").selectAll(".link");
-let nodeSelection = svgSelection.append("g").selectAll(".node");
+let linkSelection = SVG_SELECTION.append("g").selectAll(".link");
+let nodeSelection = SVG_SELECTION.append("g").selectAll(".node");
 
-const tooltip = containerSelection.append("div")
+const TOOLTIP = CONTAINER_SELECTION.append("div")
   .attr("id", "tooltip")
   .style("opacity", 0);
 
-const graphView = new GraphView();
+const GRAPH_VIEW = new GraphView();
 
-const forceSimulation = d3.forceSimulation(graphView.nodes)
+const forceSimulation = d3.forceSimulation(GRAPH_VIEW.nodes)
   .force("charge", d3.forceManyBody())
   .force("link", d3.forceLink().id(d => d.id))
-  .force("center", d3.forceCenter(width / 2, height / 2))
+  .force("center", d3.forceCenter(WIDTH / 2, HEIGHT / 2))
   .on("tick", tickActions);
 
 // MY DELTA
@@ -92,11 +91,10 @@ function go() {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
+  SVG_SELECTION.call(ZOOM.transform, d3.zoomIdentity);
+  GRAPH_VIEW.resetLevel();
 
-  svgSelection.call(zoom.transform, d3.zoomIdentity);
-  graphView.resetLevel();
-
-  let level = graphView.level;
+  let level = GRAPH_VIEW.level;
   parameters.level = level;
 
   getData(parameters);
@@ -105,13 +103,11 @@ function go() {
 // REFRESH
 function refresh() {
   d3.selectAll("input,button").attr("disabled", true);
-
-  if(graphView.root == null) {
+  if(GRAPH_VIEW.root == null) {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
 
-  svgSelection.call(zoom.transform, d3.zoomIdentity);
 
   let chromosome = graphView.root.chromosome;
   let start      = graphView.root.start;
@@ -125,13 +121,10 @@ function refresh() {
 // ZOOM IN
 function decreaseLevel() {
   d3.selectAll("input,button").attr("disabled", true);
-
-  if ( graphView.level == 0 || graphView.root == null) {
+  if ( GRAPH_VIEW.level == 0 || GRAPH_VIEW.root == null) {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
-
-  graphView.decreaseLevel();
 
   let chromosome = graphView.root.chromosome;
   let start      = graphView.root.start;
@@ -145,13 +138,10 @@ function decreaseLevel() {
 // ZOOM OUT
 function increaseLevel() {
   d3.selectAll("input,button").attr("disabled", true);
-
-  if(graphView.root == null) {
+  if(GRAPH_VIEW.root == null) {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
-
-  graphView.increaseLevel();
 
   let chromosome = graphView.root.chromosome;
   let start      = graphView.root.start;
@@ -255,7 +245,7 @@ function loadDatabaseData(parameters) {
 // GET DATA
 function getData(parameters) {
   forceSimulation.stop();
-  graphView.clear();
+  GRAPH_VIEW.clear();
 
   if(dataMode === "file") {
     console.log("Rendering from file");
@@ -276,40 +266,37 @@ function getData(parameters) {
 
 // UPDATE GRAPH
 function updateGraph(data) {
+  // Nodes
   if(data.nodes == null) return;
   data.nodes.forEach(
-    node => graphView.addNode(node.id, node.chromosome, node.start, node.end)
+    node => GRAPH_VIEW.addNode(node.id, node.chromosome, node.start, node.end)
   );
-
+  // Links
   if(data.links == null) return;
   data.links.forEach(
-    x => graphView.addLink(x.id, x.source, x.target, x.type, x.value)
+    x => GRAPH_VIEW.addLink(x.id, x.source, x.target, x.type, x.value)
   );
 }
 
 // RENDER GRAPH
 function renderGraph(parameters) {
-  let chromosome = parameters.chromosome;
-  let start = parameters.start;
-  let end = parameters.end;
-
   // Reset the nodes
-  svgSelection.selectAll("circle").remove()
-  svgSelection.selectAll(".node").remove()
-  nodeSelection = svgSelection.selectAll(".node");
+  SVG_SELECTION.selectAll("circle").remove()
+  SVG_SELECTION.selectAll(".node").remove()
+  nodeSelection = SVG_SELECTION.selectAll(".node");
 
   // Reset the links
-  svgSelection.selectAll("line").remove()
-  svgSelection.selectAll(".link").remove()
-  linkSelection = svgSelection.selectAll(".link");
+  SVG_SELECTION.selectAll("line").remove()
+  SVG_SELECTION.selectAll(".link").remove()
+  linkSelection = SVG_SELECTION.selectAll(".link");
 
-  graphView.updateRoot(chromosome, start, end);
-  graphView.setColors();
-  graphView.root.fx = width/2;
-  graphView.root.fy = height/2;
+  GRAPH_VIEW.updateRoot(parameters.chromosome, parameters.start, parameters.end);
+  GRAPH_VIEW.setColors();
+  GRAPH_VIEW.root.fx = WIDTH/2;
+  GRAPH_VIEW.root.fy = HEIGHT/2;
 
   // Apply the general update pattern to the links.
-  linkSelection = linkSelection.data(graphView.links, d => d.id);
+  linkSelection = linkSelection.data(GRAPH_VIEW.links, d => d.id);
   linkSelection.exit().remove();
   linkSelection = linkSelection.enter()
     .append("line")
@@ -322,7 +309,7 @@ function renderGraph(parameters) {
     .merge(linkSelection);
 
   // Apply the general update pattern to the nodes.
-  nodeSelection = nodeSelection.data(graphView.nodes, d => d.id);
+  nodeSelection = nodeSelection.data(GRAPH_VIEW.nodes, d => d.id);
   nodeSelection.exit().remove();
   nodeSelection = nodeSelection.enter()
     .append("circle")
@@ -339,25 +326,25 @@ function renderGraph(parameters) {
     .merge(nodeSelection);
 
     // Update and restart the simulation.
-    forceSimulation.force("link").links(graphView.links);
-    forceSimulation.nodes(graphView.nodes);
+    forceSimulation.force("link").links(GRAPH_VIEW.links);
+    forceSimulation.nodes(GRAPH_VIEW.nodes);
     forceSimulation.alpha(1).restart();
 }
 
 // NODE OVER ACTIONS
 function nodeOverActions(node) {
-  tooltip.transition()
+  TOOLTIP.transition()
     .duration(200)
     .style("opacity", .9);
 
-  tooltip.html("chr" + node.chromosome + "-" + node.start + "-" + node.end)
+  TOOLTIP.html("chr" + node.chromosome + "-" + node.start + "-" + node.end)
     .style("left", (d3.event.pageX) + "px")
     .style("top", (d3.event.pageY - 28) + "px");
 }
 
 // NODE OUT ACTIONS
 function nodeOutActions(node) {
-  tooltip.transition()
+  TOOLTIP.transition()
     .duration(200)
     .style("opacity", 0);
 }

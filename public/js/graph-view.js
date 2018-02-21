@@ -38,15 +38,25 @@ class GraphView {
   }
 
   updateRoot(chromosome, start, end) {
-    let nodes = this.graph.nodes;
-    for(let i = 0; i < nodes.length; ++i) {
-      let node = nodes[i];
-      console.log(" node: %s", node.chromosome);
-      if(node.chromosome == chromosome, node.start == start, node.end == end) {
-        this.root = node;
-        return;
-      }
-    }
-    this.root = null;
+    this.root = this.graph.nodes.find(
+      x => x.chromosome == chromosome
+             && x.start == start
+             && x.end == end)
+
+    // This does not change much if is is undefined or null, error will ensue
+    this.root = (this.root === undefined)
+        ? null
+        : this.root
+    return
   }
+
+  formatNode(node) {
+    return Object.assign(
+      {}, node, {level: (node.level === undefined)
+                        ? this.level
+                        : node.level}
+    )
+  }
+
+  getFormattedRoot() { return this.formatNode(this.root) }
 }

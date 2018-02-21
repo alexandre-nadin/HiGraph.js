@@ -3,6 +3,7 @@
 // Verificare se (2^53- 1) e' sufficiente per contenere gli indici dei nucleotidi nei cromosomi
 
 const INPUT_REGEX = /^(X|Y|x|y|[0-9]|1[0-9]|2[0-2]):\d+-\d+$/;
+const INPUT_SPLIT = /:|-/;
 const CONTAINER_SELECTION = d3.select("#hicviz-container")
 
 const NAVIGATION_SELECTION = CONTAINER_SELECTION.append("div")
@@ -48,9 +49,6 @@ const SVG_SELECTION = CONTAINER_SELECTION.append("svg")
 
 let currentTransform = d3.zoomIdentity;
 
-let linkSelection = SVG_SELECTION.append("g").selectAll(".link");
-let nodeSelection = SVG_SELECTION.append("g").selectAll(".node");
-
 const TOOLTIP = CONTAINER_SELECTION.append("div")
   .attr("id", "tooltip")
   .style("opacity", 0);
@@ -70,34 +68,42 @@ function myDelta() {
 
 // ZOOM ACTIONS
 function zoomActions() {
-  linkSelection.attr("transform", d3.event.transform);
-  nodeSelection.attr("transform", d3.event.transform);
-  linkSelection.attr("stroke-width", 2/d3.event.transform.k);
-  nodeSelection.attr("r", 8/d3.event.transform.k)
-               .attr("stroke-width", 1/d3.event.transform.k);
+  SVG_SELECTION.selectAll("line")
+    .attr("transform", d3.event.transform)
+    .attr("stroke-width", 2/d3.event.transform.k)
+
+  SVG_SELECTION.selectAll("circle")
+    .attr("transform", d3.event.transform)
+    .attr("r", 8/d3.event.transform.k)
+    .attr("stroke-width", 1/d3.event.transform.k)
   currentTransform = d3.event.transform;
 }
-
-
 
 // GO
 function go() {
   d3.selectAll("input,button").attr("disabled", true);
-
-  let parameters = getCoordinates();
-
-  if(!parameters) {
+  var inputNode = getInputNode();
+  if(!inputNode) {
     window.alert("Wrong coordinates");
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
   SVG_SELECTION.call(ZOOM.transform, d3.zoomIdentity);
   GRAPH_VIEW.resetLevel();
+  getData(GRAPH_VIEW.formatNode(inputNode));
+}
 
-  let level = GRAPH_VIEW.level;
-  parameters.level = level;
-
-  getData(parameters);
+// GET INPUT PARAMETERS
+function getInputNode() {
+  // Returns a formatted Node from the input coordinates.
+  let input  = d3.select("#coordinates").property("value");
+  if (!INPUT_REGEX.test(input)) return null
+  let coordinates = input.split(INPUT_SPLIT);
+  let chromosome = coordinates[0];
+  let start = +coordinates[1];
+  let end = +coordinates[2];
+  if(start > end) return null;
+  return new Node(null, chromosome, start, end)
 }
 
 // REFRESH
@@ -107,15 +113,8 @@ function refresh() {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
-
-
-  let chromosome = graphView.root.chromosome;
-  let start      = graphView.root.start;
-  let end        = graphView.root.end;
-  let level      = graphView.level;
-  let parameters = {chromosome: chromosome, start: start, end: end, level: level};
-
-  getData(parameters);
+  SVG_SELECTION.call(ZOOM.transform, d3.zoomIdentity);
+  getData(GRAPH_VIEW.getFormattedRoot())
 }
 
 // ZOOM IN
@@ -125,14 +124,8 @@ function decreaseLevel() {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
-
-  let chromosome = graphView.root.chromosome;
-  let start      = graphView.root.start;
-  let end        = graphView.root.end;
-  let level      = graphView.level;
-  let parameters = {chromosome: chromosome, start: start, end: end, level: level};
-
-  getData(parameters);
+  GRAPH_VIEW.decreaseLevel();
+  getData(GRAPH_VIEW.getFormattedRoot());
 }
 
 // ZOOM OUT
@@ -142,26 +135,8 @@ function increaseLevel() {
     d3.selectAll("input,button").attr("disabled", null);
     return;
   }
-
-  let chromosome = graphView.root.chromosome;
-  let start      = graphView.root.start;
-  let end        = graphView.root.end;
-  let level      = graphView.level;
-  let parameters = {chromosome: chromosome, start: start, end: end, level: level};
-
-  getData(parameters);
-}
-
-// GET PARAMETERS
-function getCoordinates() {
-  let input  = d3.select("#coordinates").property("value");
-  if(!inputRegex.test(input)) return null;
-  let coordinates = input.split(/:|-/);
-  let chromosome = coordinates[0];
-  let start = +coordinates[1];
-  let end = +coordinates[2];
-  if(start > end) return null;
-  return {chromosome: chromosome, start: start, end: end};
+  GRAPH_VIEW.increaseLevel();
+  getData(GRAPH_VIEW.getFormattedRoot());
 }
 
 // # --------------------------------------
@@ -178,16 +153,8 @@ var dataMode = 'file';
 const FILE_NODES = "../data/nodes.csv";
 const FILE_LINKS = "../data/links.csv";
 
-getData(getDefaultParameters())
-function getDefaultParameters() {
-  // For tests
-  return {
-      chromosome: "10",
-      end: 101480000,
-      level: 1,
-      start: 101470000
-    };
-}
+// For initializing test
+getData((new Node(null, "10", 101470000, 101480000)))
 
 function loadCsvDataNodesLinks(fileNodes, fileLinks, parameters=null) {
   d3.queue()
@@ -278,40 +245,16 @@ function updateGraph(data) {
   );
 }
 
-// RENDER GRAPH
-function renderGraph(parameters) {
-  // Reset the nodes
-  SVG_SELECTION.selectAll("circle").remove()
-  SVG_SELECTION.selectAll(".node").remove()
-  nodeSelection = SVG_SELECTION.selectAll(".node");
+function resetTypeDataView(type, data) {
+  SVG_SELECTION.selectAll(String(type)).remove()
+  return SVG_SELECTION.selectAll(String(type))
+    .data(data, d => d.id)
+}
 
-  // Reset the links
-  SVG_SELECTION.selectAll("line").remove()
-  SVG_SELECTION.selectAll(".link").remove()
-  linkSelection = SVG_SELECTION.selectAll(".link");
-
-  GRAPH_VIEW.updateRoot(parameters.chromosome, parameters.start, parameters.end);
-  GRAPH_VIEW.setColors();
-  GRAPH_VIEW.root.fx = WIDTH/2;
-  GRAPH_VIEW.root.fy = HEIGHT/2;
-
-  // Apply the general update pattern to the links.
-  linkSelection = linkSelection.data(GRAPH_VIEW.links, d => d.id);
-  linkSelection.exit().remove();
-  linkSelection = linkSelection.enter()
-    .append("line")
-    .attr("stroke", d => d.color)
-    .attr("stroke-dasharray", d => d.type == "H" ? "2,2" : null)
-    //.attr("stroke-width", d => Math.log10(d.weight))
-    .attr("stroke-width", 2)
-    .attr("transform", currentTransform)
-    .attr("stroke-width", 2/currentTransform.k)
-    .merge(linkSelection);
-
-  // Apply the general update pattern to the nodes.
-  nodeSelection = nodeSelection.data(GRAPH_VIEW.nodes, d => d.id);
-  nodeSelection.exit().remove();
-  nodeSelection = nodeSelection.enter()
+function resetNodesView() {
+  // Resets the nodes
+  resetTypeDataView("circle", GRAPH_VIEW.nodes)
+    .enter()
     .append("circle")
     .attr("r", 8)
     .attr("stroke", "#212121")
@@ -323,12 +266,38 @@ function renderGraph(parameters) {
     .on("mouseover", nodeOverActions)
     .on("mouseout", nodeOutActions)
     .on("click", nodeClickActions)
-    .merge(nodeSelection);
+    // .merge(nodeSelection);
+  return
+}
 
-    // Update and restart the simulation.
-    FORCE_SIMULATION.force("link").links(GRAPH_VIEW.links);
-    FORCE_SIMULATION.nodes(GRAPH_VIEW.nodes);
-    FORCE_SIMULATION.alpha(1).restart();
+function resetLinksView() {
+  resetTypeDataView("line", GRAPH_VIEW.links)
+    .enter()
+    .append("line")
+    .attr("stroke", d => d.color)
+    .attr("stroke-dasharray", d => d.type == "H" ? "2,2" : null)
+    // .attr("stroke-width", d => Math.log10(d.weight))
+    .attr("stroke-width", 2)
+    .attr("transform", currentTransform)
+    .attr("stroke-width", 2/currentTransform.k)
+    // .merge(linkSelection);
+  return
+}
+
+// RENDER GRAPH
+function renderGraph(parameters) {
+  GRAPH_VIEW.updateRoot(parameters.chromosome, parameters.start, parameters.end);
+  GRAPH_VIEW.setColors();
+  GRAPH_VIEW.root.fx = WIDTH/2;
+  GRAPH_VIEW.root.fy = HEIGHT/2;
+
+  resetLinksView()
+  resetNodesView()
+
+  // Update and restart the simulation.
+  FORCE_SIMULATION.force("link").links(GRAPH_VIEW.links);
+  FORCE_SIMULATION.nodes(GRAPH_VIEW.nodes);
+  FORCE_SIMULATION.alpha(1).restart();
 }
 
 // NODE OVER ACTIONS
@@ -351,22 +320,20 @@ function nodeOutActions(node) {
 
 // NODE CLICK ACTIONS
 function nodeClickActions(node) {
-  getData({ chromosome: node.chromosome,
-            start: node.start,
-            end: node.end,
-            level: node.level
-          })
+  getData(GRAPH_VIEW.formatNode(node))
 }
 
 // TICK ACTIONS
 function tickActions() {
-  linkSelection
+  // linkSelection
+  SVG_SELECTION.selectAll("line")
     .attr("x1", d => d.source.x)
     .attr("y1", d => d.source.y)
     .attr("x2", d => d.target.x)
     .attr("y2", d => d.target.y);
 
-  nodeSelection
+  // nodeSelection
+  SVG_SELECTION.selectAll("circle")
     .attr("cx", d => d.x)
     .attr("cy", d => d.y);
 }

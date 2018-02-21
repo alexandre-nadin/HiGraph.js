@@ -57,7 +57,7 @@ const TOOLTIP = CONTAINER_SELECTION.append("div")
 
 const GRAPH_VIEW = new GraphView();
 
-const forceSimulation = d3.forceSimulation(GRAPH_VIEW.nodes)
+const FORCE_SIMULATION = d3.forceSimulation(GRAPH_VIEW.nodes)
   .force("charge", d3.forceManyBody())
   .force("link", d3.forceLink().id(d => d.id))
   .force("center", d3.forceCenter(WIDTH / 2, HEIGHT / 2))
@@ -244,7 +244,7 @@ function loadDatabaseData(parameters) {
 
 // GET DATA
 function getData(parameters) {
-  forceSimulation.stop();
+  FORCE_SIMULATION.stop();
   GRAPH_VIEW.clear();
 
   if(dataMode === "file") {
@@ -326,9 +326,9 @@ function renderGraph(parameters) {
     .merge(nodeSelection);
 
     // Update and restart the simulation.
-    forceSimulation.force("link").links(GRAPH_VIEW.links);
-    forceSimulation.nodes(GRAPH_VIEW.nodes);
-    forceSimulation.alpha(1).restart();
+    FORCE_SIMULATION.force("link").links(GRAPH_VIEW.links);
+    FORCE_SIMULATION.nodes(GRAPH_VIEW.nodes);
+    FORCE_SIMULATION.alpha(1).restart();
 }
 
 // NODE OVER ACTIONS

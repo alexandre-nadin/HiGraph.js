@@ -79,33 +79,6 @@ function zoomActions() {
   currentTransform = d3.event.transform;
 }
 
-// GO
-function go() {
-  d3.selectAll("input,button").attr("disabled", true);
-  var inputNode = getInputNode();
-  if(!inputNode) {
-    window.alert("Wrong coordinates");
-    d3.selectAll("input,button").attr("disabled", null);
-    return;
-  }
-  SVG_SELECTION.call(ZOOM.transform, d3.zoomIdentity);
-  GRAPH_VIEW.resetLevel();
-  getData(GRAPH_VIEW.formatNode(inputNode));
-}
-
-// GET INPUT PARAMETERS
-function getInputNode() {
-  // Returns a formatted Node from the input coordinates.
-  let input  = d3.select("#coordinates").property("value");
-  if (!INPUT_REGEX.test(input)) return null
-  let coordinates = input.split(INPUT_SPLIT);
-  let chromosome = coordinates[0];
-  let start = +coordinates[1];
-  let end = +coordinates[2];
-  if(start > end) return null;
-  return new Node(null, chromosome, start, end)
-}
-
 // REFRESH
 function refresh() {
   d3.selectAll("input,button").attr("disabled", true);
@@ -150,63 +123,37 @@ const DATA_MODES = {
 var dataMode = 'file';
 
 // d1 reading multiple files
-const FILE_NODES = "../data/nodes.csv";
-const FILE_LINKS = "../data/links.csv";
+const FILE_NODES = "../data/nodes.csv" + "_h10";
+const FILE_LINKS = "../data/links.csv" + "_h10";
 
 // For initializing test
 getData((new Node(null, "10", 101470000, 101480000)))
 
-function loadCsvDataNodesLinks(fileNodes, fileLinks, parameters=null) {
-  d3.queue()
-    .defer(d3.csv, fileNodes)
-    .defer(d3.csv, fileLinks)
-    .await(processCsvNodesLinks(parameters));
-}
-
-function processCsvNodesLinks(parameters) {
-  return function (error, nodes, links) {
-    var linkId = 0
-    if(error) { console.log(error); }
-    updateGraph({
-      nodes: nodes.map(x => formatCsvDataNode(x)),
-      links: links.map(x => formatCsvDataLink(x, linkId++))
-    })
-    renderGraph(parameters)
+// GO
+function go() {
+  d3.selectAll("input,button").attr("disabled", true);
+  var inputNode = getInputNode();
+  if(!inputNode) {
+    window.alert("Wrong coordinates");
+    d3.selectAll("input,button").attr("disabled", null);
+    return;
   }
+  SVG_SELECTION.call(ZOOM.transform, d3.zoomIdentity);
+  GRAPH_VIEW.resetLevel();
+  getData(GRAPH_VIEW.formatNode(inputNode));
 }
 
-function formatCsvDataNode(d, id=null) {
-  return {
-    id: String(d.chromosome + d.start + d.end),
-    chromosome: d.chromosome,
-    start: d.start,
-    end: d.end
-  }
-}
-
-function formatCsvDataLink(d, id=null) {
-  return {
-    id: id,
-    source: String(d.sourceChromosome + d.sourceStart + d.sourceEnd),
-    target: String(d.targetChromosome + d.targetStart + d.targetEnd),
-    type: d.type,
-    value: d.value
-  }
-}
-
-function loadDatabaseData(parameters) {
-  d3.request("http://localhost:3000/query")
-    .header("Content-Type", "application/json")
-    .mimeType("application/json")
-    .response(xhr => JSON.parse(xhr.responseText))
-    .post(JSON.stringify(parameters), (err, res) => {
-        if(res == null) {
-          window.alert("The region is not in the database");
-        } else {
-          updateGraph(res);
-          renderGraph(parameters);
-        }
-    });
+// GET INPUT PARAMETERS
+function getInputNode() {
+  // Returns a formatted Node from the input coordinates.
+  let input  = d3.select("#coordinates").property("value");
+  if (!INPUT_REGEX.test(input)) return null
+  let coordinates = input.split(INPUT_SPLIT);
+  let chromosome = coordinates[0];
+  let start = +coordinates[1];
+  let end = +coordinates[2];
+  if(start > end) return null;
+  return new Node(null, chromosome, start, end)
 }
 
 // GET DATA
@@ -230,6 +177,144 @@ function getData(parameters) {
   }
   d3.selectAll('input,button').attr('disabled', null);
 }
+
+function loadDatabaseData(parameters) {
+  d3.request("http://localhost:3000/query")
+    .header("Content-Type", "application/json")
+    .mimeType("application/json")
+    .response(xhr => JSON.parse(xhr.responseText))
+    .post(JSON.stringify(parameters), (err, res) => {
+        if(res == null) {
+          window.alert("The region is not in the database");
+        } else {
+          updateGraph(res);
+          renderGraph(parameters);
+        }
+    });
+}
+
+function loadCsvDataNodesLinks(fileNodes, fileLinks, parameters=null) {
+  /*
+   * Loads CSV files for nodes and links.
+   * Send them to the process function.
+   */
+  d3.queue()
+    .defer(d3.csv, fileNodes)
+    .defer(d3.csv, fileLinks)
+    .await(processCsvNodesLinks_links(parameters));
+    // .await(processCsvNodesLinks_all(parameters));
+}
+
+function processCsvNodesLinks_all(parameters) {
+  /*
+   * Processes nodes and links separately
+   * Implies both come from different files.
+   */
+  return function (error, nodes, links) {
+    var linkId = 0
+    if(error) { console.log(error); }
+    updateGraph({
+      nodes: nodes.map(x => formatCsvDataNode(x)),
+      links: links.map(x => formatCsvDataLink(x, linkId++))
+    })
+    renderGraph(parameters)
+  }
+}
+
+function processCsvNodesLinks_links(parameters) {
+  /*
+   * Processes links and nodes from links.
+   * Implies only links files are provided.
+   */
+  return function (error, nodes, links) {
+    if(error) { console.log(error); }
+    updateGraph(getNodesLinksFromLinks(links))
+    renderGraph(parameters)
+  }
+}
+
+function getNodesLinksFromLinks(plinks) {
+  /*
+   * Parses raw links and extracts actual links and nodes from them.
+   * Returns a dictionary of nodes and links.
+   */
+  var nodes = []
+  var links = []
+  var linkId = 0
+  plinks.forEach(l => {
+    links.push(formatCsvDataLink(l, linkId++))
+    pushUniqueObjectsByAttributes(
+      nodes,
+      [ formatCsvDataNode(
+          new Node(null, l.sourceChromosome, l.sourceStart, l.sourceEnd)),
+        formatCsvDataNode(
+          new Node(null, l.targetChromosome, l.targetStart, l.targetEnd))
+      ],
+      GRAPH_VIEW.getNodeUniqueAttrs())
+  })
+  return {
+    nodes: nodes,
+    links: links
+  }
+}
+
+function pushUniqueObjectsByAttributes(uniqueObjects, objects, attributes=[]) {
+  /*
+   * Pushes the given 'objects' only if their specified list of 'attributes'
+   * are unique in the provided unique list 'uniqueObjects'.
+   */
+
+  objects.forEach(o => {
+    // Initialize list if empty.
+    if (uniqueObjects.length === 0) {
+      uniqueObjects.push(o)
+    }
+
+    // Else push if unique set of attributes only.
+    if (! existsObjectByAttributes(uniqueObjects, o, attributes)) {
+      uniqueObjects.push(o)
+    }
+  })
+}
+
+function existsObjectByAttributes(objects, object, attributes=[], atLeast=null) {
+  /*
+   * Returns true if all of the given 'object'`s 'attributes' exist in a list
+   * of 'objects'.
+   * Can specify the minimum number of attribute match required.
+   */
+  atLeast = (atLeast === null || atLeast > attributes.length || atLeast < 0)
+            ? attributes.length
+            : atLeast
+
+  return (objects.filter(o => {
+            return (attributes.filter(a => {
+                      return (o[a] === object[a]) ;} )
+                   .length
+                   >= atLeast)
+  }).length > 0)
+}
+
+function formatCsvDataNode(d, id=null) {
+  return {
+    id: String(d.chromosome + d.start + d.end),
+    chromosome: d.chromosome,
+    start: d.start,
+    end: d.end
+  }
+}
+
+function formatCsvDataLink(d, id=null) {
+  return {
+    id: id,
+    source: String(d.sourceChromosome + d.sourceStart + d.sourceEnd),
+    target: String(d.targetChromosome + d.targetStart + d.targetEnd),
+    type: d.type,
+    value: d.value
+  }
+}
+
+
 
 // UPDATE GRAPH
 function updateGraph(data) {

@@ -8,9 +8,14 @@ class GraphView {
   get nodes() { return this.graph.nodes }
   get links() { return this.graph.links }
 
+  getNodeUniqueAttrs() {
+    return ['id'] //'chromosome']
+  }
   addNode(id, chromosome, start, end) {
+    // if (this.graph.nodes.filter(x => x.id === id).length === 0)
     this.graph.addNode(id, chromosome, start, end)
   }
+
   addLink(id, source, target, type, weight) {
     this.graph.addLink(id, source, target, type, weight)
   }

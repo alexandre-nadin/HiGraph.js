@@ -120,7 +120,7 @@ const LOADING_DATA_MODES = {
   database: loadDataDatabase,
   csvLinks: loadDataCsvLinks,
   csvLinksNodes: loadDataCsvLinksNodes
-};
+}
 var dataLoadingMode = LOADING_DATA_MODES['csvLinks'];
 
 // Reading multiple files
@@ -192,10 +192,10 @@ function loadDataCsvLinks(parameters) {
    * Send them to the process function.
    */
   loadD3CsvData([CSV_LINKS])
-    .await(processCsvLinks(parameters))
+    .await(processCsvLinksNodes(parameters))
 }
 
-function loadDataCsvLinksNodes(parameters, csvLinks, csvNodes) {
+function loadDataCsvLinksNodes(parameters) {
   /*
    * Loads CSV files for nodes and links.
    * Send them to the process function.
@@ -216,46 +216,35 @@ function loadD3CsvData(csvFiles=[]) {
 
 function processCsvLinksNodes(parameters) {
   /*
-   * Processes nodes and links separately
-   * Implies both come from different files.
+   * Processes CSV links and nodes.
    */
   return function (error, links, nodes) {
-    var linkId = 0
     if(error) { console.log(error); }
-    updateGraph({
-      nodes: nodes.map(x => formatCsvDataNode(x)),
-      links: links.map(x => formatCsvDataLink(x, linkId++))
-    })
+    updateGraph(formatCsvLinksNodes(links, nodes))
     renderGraph(parameters)
   }
 }
 
-function processCsvLinks(parameters) {
+function formatCsvLinksNodes(plinks, pnodes) {
   /*
-   * Processes links and nodes from links.
-   * Implies only links files are provided.
-   */
-  return function (error, links, nodes) {
-    if(error) { console.log(error); }
-    updateGraph(getLinksNodesFromLinks(links))
-    renderGraph(parameters)
-  }
-}
-
-function getLinksNodesFromLinks(plinks) {
-  /*
-   * Parses raw links and extracts actual links and nodes from them.
+   * Parses raw links and nodes.
+   * If no nodes specified, exptrapolates the nodes relevant to each link.
    * Returns a dictionary of unique nodes and links.
    */
   var nodes = []
   var links = []
   var linkId = 0
+
+  // Push all links provided
   plinks.forEach(l => {
     pushUniqueObjectsByAttributes(
       links,
       [ formatCsvDataLink(l, linkId++)],
       GRAPH_VIEW.getLinkUniqueAttrs()
     )
+
+    // Extrapolate and push nodes from current link 'l' if no nodes 'pnodes' provided
+    if (pnodes) return;
     pushUniqueObjectsByAttributes(
       nodes,
       [ formatCsvDataNode(
@@ -266,6 +255,19 @@ function getLinksNodesFromLinks(plinks) {
       GRAPH_VIEW.getNodeUniqueAttrs()
     )
   })
+
+  // Push nodes if provided
+  if (pnodes) {
+    console.log("Nodes provided. No extrapolation from links");
+    pushUniqueObjectsByAttributes(
+      nodes,
+      pnodes.map(n => formatCsvDataNode(
+        new Node(null, n.chromosome, n.start, n.end))),
+      GRAPH_VIEW.getNodeUniqueAttrs()
+    )
+  } else {
+    console.log("No nodes provided. Extrapolation from links");
+  }
   return {
     nodes: nodes,
     links: links

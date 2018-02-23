@@ -112,19 +112,20 @@ function increaseLevel() {
   getData(GRAPH_VIEW.getFormattedRoot());
 }
 
-// # --------------------------------------
-// # LOADING DATA FROM DIFFERENT SOURCES
-// # csv or database
-// # --------------------------------------
-const DATA_MODES = {
-  file: loadCsvDataNodesLinks,
-  database: loadDatabaseData
+ // --------------------------------------
+ // LOADING DATA FROM DIFFERENT SOURCES
+ //   csv or database
+ // --------------------------------------
+const LOADING_DATA_MODES = {
+  database: loadDataDatabase,
+  csvLinks: loadDataCsvLinks,
+  csvLinksNodes: loadDataCsvLinksNodes
 };
-var dataMode = 'file';
+var dataLoadingMode = LOADING_DATA_MODES['csvLinks'];
 
-// d1 reading multiple files
-const FILE_NODES = "../data/nodes.csv" + "_h10";
-const FILE_LINKS = "../data/links.csv" + "_h10";
+// Reading multiple files
+const CSV_NODES = "../data/nodes.csv" + "_h10";
+const CSV_LINKS = "../data/links.csv" + "_h10";
 
 // For initializing test
 getData((new Node(null, "10", 101470000, 101480000)))
@@ -158,27 +159,19 @@ function getInputNode() {
 
 // GET DATA
 function getData(parameters) {
+  /*
+   * Gets data from the loading mode specified by 'dataLoadingMode' variable.
+   * Available loading modes are in 'LOADING_DATA_MODES'.
+   */
   FORCE_SIMULATION.stop();
   GRAPH_VIEW.clear();
 
-  if(dataMode === "file") {
-    console.log("Rendering from file");
-    loadCsvDataNodesLinks(
-      FILE_NODES,
-      FILE_LINKS,
-      parameters
-    );
-  } else if (dataMode === "database") {
-    console.log("Rendering from database");
-    loadDatabaseData(parameters)
-  } else {
-    console.log("No rendering mode found for '", dataMode, "'");
-    return null;
-  }
+  console.log("Rendering from ", dataLoadingMode);
+  dataLoadingMode(parameters)
   d3.selectAll('input,button').attr('disabled', null);
 }
 
-function loadDatabaseData(parameters) {
+function loadDataDatabase(parameters) {
   d3.request("http://localhost:3000/query")
     .header("Content-Type", "application/json")
     .mimeType("application/json")
@@ -193,24 +186,40 @@ function loadDatabaseData(parameters) {
     });
 }
 
-function loadCsvDataNodesLinks(fileNodes, fileLinks, parameters=null) {
+function loadDataCsvLinks(parameters) {
+  /*
+   * Loads CSV files for links.
+   * Send them to the process function.
+   */
+  loadD3CsvData([CSV_LINKS])
+    .await(processCsvLinks(parameters))
+}
+
+function loadDataCsvLinksNodes(parameters, csvLinks, csvNodes) {
   /*
    * Loads CSV files for nodes and links.
    * Send them to the process function.
    */
-  d3.queue()
-    .defer(d3.csv, fileNodes)
-    .defer(d3.csv, fileLinks)
-    .await(processCsvNodesLinks_links(parameters));
-    // .await(processCsvNodesLinks_all(parameters));
+  loadD3CsvData([CSV_LINKS, CSV_NODES])
+    .await(processCsvLinksNodes(parameters))
 }
 
-function processCsvNodesLinks_all(parameters) {
+function loadD3CsvData(csvFiles=[]) {
+  /*
+   * Reads and loads a list of CSV files in a d3 queue.
+   * Returns the d3 queue to process.
+   */
+  var d3Queue = d3.queue()
+  csvFiles.forEach(x => d3Queue.defer(d3.csv, x))
+  return d3Queue
+}
+
+function processCsvLinksNodes(parameters) {
   /*
    * Processes nodes and links separately
    * Implies both come from different files.
    */
-  return function (error, nodes, links) {
+  return function (error, links, nodes) {
     var linkId = 0
     if(error) { console.log(error); }
     updateGraph({
@@ -221,19 +230,19 @@ function processCsvNodesLinks_all(parameters) {
   }
 }
 
-function processCsvNodesLinks_links(parameters) {
+function processCsvLinks(parameters) {
   /*
    * Processes links and nodes from links.
    * Implies only links files are provided.
    */
-  return function (error, nodes, links) {
+  return function (error, links, nodes) {
     if(error) { console.log(error); }
-    updateGraph(getNodesLinksFromLinks(links))
+    updateGraph(getLinksNodesFromLinks(links))
     renderGraph(parameters)
   }
 }
 
-function getNodesLinksFromLinks(plinks) {
+function getLinksNodesFromLinks(plinks) {
   /*
    * Parses raw links and extracts actual links and nodes from them.
    * Returns a dictionary of unique nodes and links.
@@ -268,7 +277,6 @@ function pushUniqueObjectsByAttributes(uniqueObjects, objects, attributes=[]) {
    * Pushes the given 'objects' only if their specified list of 'attributes'
    * are unique in the provided unique list 'uniqueObjects'.
    */
-
   objects.forEach(o => {
     // Initialize list if empty.
     if (uniqueObjects.length === 0) {
@@ -293,10 +301,9 @@ function existsObjectByAttributes(objects, object, attributes=[], atLeast=null) 
             : atLeast
 
   return (objects.filter(o => {
-            return (attributes.filter(a => {
-                      return (o[a] === object[a]) ;} )
-                   .length
-                   >= atLeast)
+            return (attributes.filter(a => { return (o[a] === object[a]) } )
+                     .length
+                    >= atLeast)
   }).length > 0)
 }
 
@@ -318,8 +325,6 @@ function formatCsvDataLink(d, id=null) {
     value: d.value
   }
 }
-
-
 
 // UPDATE GRAPH
 function updateGraph(data) {

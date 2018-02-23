@@ -118,10 +118,10 @@ function increaseLevel() {
  // --------------------------------------
 const LOADING_DATA_MODES = {
   database: loadDataDatabase,
-  csvLinks: loadDataCsvLinks,
+  csvLinks: loadDataCsvLinksNodes,
   csvLinksNodes: loadDataCsvLinksNodes
 }
-var dataLoadingMode = LOADING_DATA_MODES['csvLinks'];
+var loadingDataMode = 'csvLinks'
 
 // Reading multiple files
 const CSV_NODES = "../data/nodes.csv" + "_h10";
@@ -160,14 +160,14 @@ function getInputNode() {
 // GET DATA
 function getData(parameters) {
   /*
-   * Gets data from the loading mode specified by 'dataLoadingMode' variable.
+   * Gets data from the loading mode specified by 'loadingDataMode' variable.
    * Available loading modes are in 'LOADING_DATA_MODES'.
    */
   FORCE_SIMULATION.stop();
   GRAPH_VIEW.clear();
 
-  console.log("Rendering from ", dataLoadingMode);
-  dataLoadingMode(parameters)
+  console.log("Rendering from ", loadingDataMode);
+  LOADING_DATA_MODES[loadingDataMode](parameters)
   d3.selectAll('input,button').attr('disabled', null);
 }
 
@@ -186,21 +186,17 @@ function loadDataDatabase(parameters) {
     });
 }
 
-function loadDataCsvLinks(parameters) {
-  /*
-   * Loads CSV files for links.
-   * Send them to the process function.
-   */
-  loadD3CsvData([CSV_LINKS])
-    .await(processCsvLinksNodes(parameters))
-}
-
 function loadDataCsvLinksNodes(parameters) {
   /*
    * Loads CSV files for nodes and links.
-   * Send them to the process function.
+   * If loading mode 'loadingDataMode' is from links ONLY, reads links CSV file
+   * ONLY and nodes will be deduced from links. Else reads nodes from CSV file
+   * too.
+   * Sends links and nodes to the process function.
    */
-  loadD3CsvData([CSV_LINKS, CSV_NODES])
+  loadD3CsvData((loadingDataMode === 'csvLinks')
+                ? [CSV_LINKS]
+                : [CSV_LINKS, CSV_NODES])
     .await(processCsvLinksNodes(parameters))
 }
 

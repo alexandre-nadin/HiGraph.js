@@ -11,6 +11,11 @@ class GraphView {
   getNodeUniqueAttrs() {
     return ['id'] //'chromosome']
   }
+
+  getLinkUniqueAttrs() {
+    return ['source', 'target']
+  }
+
   addNode(id, chromosome, start, end) {
     // if (this.graph.nodes.filter(x => x.id === id).length === 0)
     this.graph.addNode(id, chromosome, start, end)

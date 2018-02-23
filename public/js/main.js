@@ -236,13 +236,17 @@ function processCsvNodesLinks_links(parameters) {
 function getNodesLinksFromLinks(plinks) {
   /*
    * Parses raw links and extracts actual links and nodes from them.
-   * Returns a dictionary of nodes and links.
+   * Returns a dictionary of unique nodes and links.
    */
   var nodes = []
   var links = []
   var linkId = 0
   plinks.forEach(l => {
-    links.push(formatCsvDataLink(l, linkId++))
+    pushUniqueObjectsByAttributes(
+      links,
+      [ formatCsvDataLink(l, linkId++)],
+      GRAPH_VIEW.getLinkUniqueAttrs()
+    )
     pushUniqueObjectsByAttributes(
       nodes,
       [ formatCsvDataNode(
@@ -250,7 +254,8 @@ function getNodesLinksFromLinks(plinks) {
         formatCsvDataNode(
           new Node(null, l.targetChromosome, l.targetStart, l.targetEnd))
       ],
-      GRAPH_VIEW.getNodeUniqueAttrs())
+      GRAPH_VIEW.getNodeUniqueAttrs()
+    )
   })
   return {
     nodes: nodes,

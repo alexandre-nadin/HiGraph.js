@@ -37,7 +37,7 @@ class GraphView {
 
     let min = d3.min(this.graph.links, d => d.weight);
     let max = d3.max(this.graph.links, d => d.weight);
-    var heatmapColor = d3.scaleLog()
+    let heatmapColor = d3.scaleLog()
       //.domain([min, min+(max-min)/2, max])
       //.range(["red", "yellow", "white"]);
       .domain([min, max])

@@ -121,7 +121,7 @@ const LOADING_DATA_MODES = {
   csvLinks: loadDataCsvLinksNodes,
   csvLinksNodes: loadDataCsvLinksNodes
 }
-var loadingDataMode = 'csvLinks'
+let loadingDataMode = 'csvLinks'
 
 // Reading multiple files
 const CSV_NODES = "../data/nodes.csv" + "_h10";
@@ -133,7 +133,7 @@ getData((new Node(null, "10", 101470000, 101480000)))
 // GO
 function go() {
   d3.selectAll("input,button").attr("disabled", true);
-  var inputNode = getInputNode();
+  let inputNode = getInputNode();
   if(!inputNode) {
     window.alert("Wrong coordinates");
     d3.selectAll("input,button").attr("disabled", null);
@@ -205,7 +205,7 @@ function loadD3CsvData(csvFiles=[]) {
    * Reads and loads a list of CSV files in a d3 queue.
    * Returns the d3 queue to process.
    */
-  var d3Queue = d3.queue()
+  const d3Queue = d3.queue()
   csvFiles.forEach(x => d3Queue.defer(d3.csv, x))
   return d3Queue
 }
@@ -227,9 +227,9 @@ function formatCsvLinksNodes(plinks, pnodes) {
    * If no nodes specified, exptrapolates the nodes relevant to each link.
    * Returns a dictionary of unique nodes and links.
    */
-  var nodes = []
-  var links = []
-  var linkId = 0
+  let nodes = []
+  let links = []
+  let linkId = 0
 
   // Push all links provided
   plinks.forEach(l => {

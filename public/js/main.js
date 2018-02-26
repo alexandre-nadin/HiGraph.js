@@ -127,6 +127,9 @@ let loadingDataMode = 'csvLinks'
 const CSV_NODES = "../data/nodes.csv" + "_h10";
 const CSV_LINKS = "../data/links.csv" + "_h10";
 
+const NEIGHBOR_LEVEL_DEFAULT = 5
+let neighborLevelCurrent = NEIGHBOR_LEVEL_DEFAULT
+
 // For initializing test
 getData((new Node(null, "10", 101470000, 101480000)))
 
@@ -216,12 +219,12 @@ function processCsvLinksNodes(parameters) {
    */
   return function (error, links, nodes) {
     if(error) { console.log(error); }
-    updateGraph(formatCsvLinksNodes(links, nodes))
+    updateGraph(filterCsvLinksNodes(links, nodes, parameters))
     renderGraph(parameters)
   }
 }
 
-function formatCsvLinksNodes(plinks, pnodes) {
+function filterCsvLinksNodes(plinks, pnodes, parameters) {
   /*
    * Parses raw links and nodes.
    * If no nodes specified, exptrapolates the nodes relevant to each link.
@@ -231,26 +234,27 @@ function formatCsvLinksNodes(plinks, pnodes) {
   let links = []
   let linkId = 0
 
-  // Push all links provided
-  plinks.forEach(l => {
-    pushUniqueObjectsByAttributes(
-      links,
-      [ formatCsvDataLink(l, linkId++)],
-      GRAPH_VIEW.getLinkUniqueAttrs()
-    )
+  filterCsvLinksNeighbors(plinks, parameters, neighborLevelCurrent)
+    .forEach(l => {
+      pushUniqueObjectsByAttributes(
+        links,
+        [ formatCsvDataLink(l, linkId++)],
+        GRAPH_VIEW.getLinkUniqueAttrs()
+      )
 
-    // Extrapolate and push nodes from current link 'l' if no nodes 'pnodes' provided
-    if (pnodes) return;
-    pushUniqueObjectsByAttributes(
-      nodes,
-      [ formatCsvDataNode(
-          new Node(null, l.sourceChromosome, l.sourceStart, l.sourceEnd)),
-        formatCsvDataNode(
-          new Node(null, l.targetChromosome, l.targetStart, l.targetEnd))
-      ],
-      GRAPH_VIEW.getNodeUniqueAttrs()
-    )
-  })
+      // Extrapolate and push nodes from current link 'l' if no nodes 'pnodes'
+      // provided
+      if (pnodes) return;
+      pushUniqueObjectsByAttributes(
+        nodes,
+        [ formatCsvDataNode(
+            new Node(null, l.sourceChromosome, l.sourceStart, l.sourceEnd)),
+          formatCsvDataNode(
+            new Node(null, l.targetChromosome, l.targetStart, l.targetEnd))
+        ],
+        GRAPH_VIEW.getNodeUniqueAttrs()
+      )
+    })
 
   // Push nodes if provided
   if (pnodes) {
@@ -268,6 +272,45 @@ function formatCsvLinksNodes(plinks, pnodes) {
     nodes: nodes,
     links: links
   }
+}
+
+function filterCsvLinksNeighbors(links, node, neighborCounter) {
+  /*
+   * Pushes CSV data 'links' which source and target nodes match the provided
+   * 'node'.
+   * Recursively finds neighboring nodes while 'neighborCounter' > 0
+   */
+  let flinks = []
+  links.filter(l => {
+    // Match source or target
+     return ((l.sourceChromosome == node.chromosome
+           && l.sourceStart == node.start
+           && l.sourceEnd == node.end)
+          || (l.targetChromosome == node.chromosome
+           && l.targetStart == node.start
+           && l.targetEnd == node.end))
+     })
+    .forEach(l => {
+       // Push origin
+       flinks.push(l)
+       // console.log("[Node] ", node);
+       // console.log("  Pushed link: ", l, " remains %d neighbors", neighborCounter);
+       if ( neighborCounter > 0) {
+         // Filter source node
+         filterCsvLinksNeighbors(
+             links,
+             new Node(null, l.sourceChromosome,  l.sourceStart, l.sourceEnd),
+             neighborCounter-1)
+           .forEach(l => flinks.push(l))
+         // Filter target node
+         filterCsvLinksNeighbors(
+               links,
+               new Node(null, l.targetChromosome,  l.targetStart, l.targetEnd),
+               neighborCounter-1)
+             .forEach(l => flinks.push(l))
+       }
+    })
+  return flinks
 }
 
 function pushUniqueObjectsByAttributes(uniqueObjects, objects, attributes=[]) {

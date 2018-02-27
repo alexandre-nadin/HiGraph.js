@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#OUTPUT_FILE='links_neighbors.csv'
+manual() {
+  cat << EOL
+
+  DESCRIPTION
+    Creates links with NEIGH_PER_NODE neighbors per node and a maximum
+    neighborhood level of MAX_NEIGH_LVL.
+
+  USAGE
+    \$ ${BASH_SOURCE[0]} [NEIGH_PER_NODE] [MAX_NEIGH_LVL]
+
+EOL
+}
+[ "${#@}" -lt 2 ] \
+ && manual \
+ && exit 
+
+NEIGH_PER_NODE=${1}
+MAX_NEIGH_LVL=${2}
+
+CUR_NODE=0
+
+function make_x_neigh() {
+  local _node_nb _neigh_per_node _neigh_lvl
+  _node_nb=$1 && shift
+  _neigh_per_node=$1 && shift
+  _neigh_lvl=$1 && shift
+  [ $_neigh_lvl -le 0 ] && return
+  for _neigh in $(seq $_neigh_per_node); do
+    CUR_NODE=$((CUR_NODE+1))
+    printf '"1"',${_node_nb}01,${_node_nb}02,'"1"',${CUR_NODE}01,${CUR_NODE}02,"L",100"\n"
+    make_x_neigh $CUR_NODE $_neigh_per_node $((_neigh_lvl - 1))
+    #echo make_x_neigh $CUR_NODE $_neigh_per_node $((_neigh_lvl - 1))
+    
+  done
+}
+
+printf "sourceChromosome","sourceStart","sourceEnd","targetChromosome","targetStart","targetEnd","type","value""\n"
+make_x_neigh $CUR_NODE $NEIGH_PER_NODE $MAX_NEIGH_LVL

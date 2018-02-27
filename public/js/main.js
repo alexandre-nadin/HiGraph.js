@@ -124,10 +124,11 @@ const LOADING_DATA_MODES = {
 let loadingDataMode = 'csvLinks'
 
 // Reading multiple files
-const CSV_NODES = "../data/nodes.csv" + "_h10";
-const CSV_LINKS = "../data/links.csv" + "_h10";
+// const CSV_NODES = "../data/nodes.csv" + "_h10";
+// const CSV_LINKS = "../data/links.csv" + "_h10";
+const CSV_LINKS = "../data/links_neighbors.csv";
 
-const NEIGHBOR_LEVEL_DEFAULT = 5
+const NEIGHBOR_LEVEL_DEFAULT = 2
 let neighborLevelCurrent = NEIGHBOR_LEVEL_DEFAULT
 
 // For initializing test

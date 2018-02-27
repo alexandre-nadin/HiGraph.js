@@ -17,6 +17,8 @@ NAVIGATION_SELECTION.append("button")
   .attr("id", "go-button")
   .html("Go")
   .on("click", go);
+
+// Zoom level
 NAVIGATION_SELECTION.append("button")
   .attr("id", "zoom-out-button")
   .html("Zoom-Out")
@@ -25,6 +27,17 @@ NAVIGATION_SELECTION.append("button")
   .attr("id", "zoom-in-button")
   .html("Zoom-In")
   .on("click", decreaseLevel);
+
+// Neighbor level
+NAVIGATION_SELECTION.append("button")
+  .attr("id", "neighbor-out-button")
+  .html("Neighbor++")
+  .on("click", increaseNeighborLevel);
+NAVIGATION_SELECTION.append("button")
+  .attr("id", "neighbor-in-button")
+  .html("Neighbor--")
+  .on("click", decreaseNeighborLevel);
+
 NAVIGATION_SELECTION.append("button")
   .attr("id", "refresh-button")
   .html("Refresh")
@@ -112,6 +125,28 @@ function increaseLevel() {
   getData(GRAPH_VIEW.getFormattedRoot());
 }
 
+// Neighbor --
+function decreaseNeighborLevel() {
+  d3.selectAll("input,button").attr("disabled", true);
+  if(GRAPH_VIEW.root == null || GRAPH_VIEW.neighborLevel == 0) {
+    d3.selectAll("input,button").attr("disabled", null);
+    return;
+  }
+  GRAPH_VIEW.decreaseNeighborLevel();
+  getData(GRAPH_VIEW.getFormattedRoot());
+}
+
+// Neighbor ++
+function increaseNeighborLevel() {
+  d3.selectAll("input,button").attr("disabled", true);
+  if(GRAPH_VIEW.root == null) {
+    d3.selectAll("input,button").attr("disabled", null);
+    return;
+  }
+  GRAPH_VIEW.increaseNeighborLevel();
+  getData(GRAPH_VIEW.getFormattedRoot());
+}
+
  // --------------------------------------
  // LOADING DATA FROM DIFFERENT SOURCES
  //   csv or database
@@ -124,14 +159,12 @@ const LOADING_DATA_MODES = {
 let loadingDataMode = 'csvLinks'
 
 // Reading multiple files
-const CSV_NODES = "../data/nodes.csv" + "_h10";
-const CSV_LINKS = "../data/links.csv" + "_h10";
-
-const NEIGHBOR_LEVEL_DEFAULT = 5
-let neighborLevelCurrent = NEIGHBOR_LEVEL_DEFAULT
+// const CSV_LINKS = "../data/links.csv";
+const CSV_LINKS = "../data/links_neighbors.csv";
 
 // For initializing test
-getData((new Node(null, "10", 101470000, 101480000)))
+// getData((new Node(null, "10", 101470000, 101480000)))
+getData((new Node(null, "1", 001, 002)))
 
 // GO
 function go() {
@@ -234,7 +267,7 @@ function filterCsvLinksNodes(plinks, pnodes, parameters) {
   let links = []
   let linkId = 0
 
-  filterCsvLinksNeighbors(plinks, parameters, neighborLevelCurrent)
+  filterCsvLinksNeighbors(plinks, parameters, GRAPH_VIEW.neighborLevel)
     .forEach(l => {
       pushUniqueObjectsByAttributes(
         links,

@@ -3,6 +3,8 @@ class GraphView {
     this.graph  = new Graph();
     this.root   = null;
     this.level  = 1;
+    const NEIGHBOR_LEVEL_DEFAULT = 2
+    this.neighborLevel = NEIGHBOR_LEVEL_DEFAULT
   }
 
   get nodes() { return this.graph.nodes }
@@ -25,6 +27,8 @@ class GraphView {
     this.graph.addLink(id, source, target, type, weight)
   }
 
+  increaseNeighborLevel() { ++this.neighborLevel }
+  decreaseNeighborLevel() { --this.neighborLevel }
   increaseLevel() { ++this.level }
   decreaseLevel() { --this.level }
   resetLevel()    { this.level = 1 }

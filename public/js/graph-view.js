@@ -1,9 +1,12 @@
+const NEIGHBOR_LEVEL_DEFAULT = 2
+const NEIGHBOR_LEVEL_MIN = 0
+const ZOOM_LEVEL_MIN = 0
+
 class GraphView {
   constructor() {
     this.graph  = new Graph();
     this.root   = null;
-    this.level  = 1;
-    const NEIGHBOR_LEVEL_DEFAULT = 2
+    this.zoomLevel  = 1;
     this.neighborLevel = NEIGHBOR_LEVEL_DEFAULT
   }
 
@@ -27,11 +30,18 @@ class GraphView {
     this.graph.addLink(id, source, target, type, weight)
   }
 
+  increaseZoomLevel() { ++this.zoomLevel }
+  decreaseLevel() {
+    if(this.zoomLevel === ZOOM_LEVEL_MIN) return null
+    --this.zoomLevel
+  }
+  resetZoomLevel() { this.zoomLevel = ZOOM_LEVEL_MIN }
+
   increaseNeighborLevel() { ++this.neighborLevel }
-  decreaseNeighborLevel() { --this.neighborLevel }
-  increaseLevel() { ++this.level }
-  decreaseLevel() { --this.level }
-  resetLevel()    { this.level = 1 }
+  decreaseNeighborLevel() {
+    if(this.neighborLevel === NEIGHBOR_LEVEL_MIN) return null
+    --this.neighborLevel
+  }
 
   clear() { this.graph.clear() }
 
@@ -67,7 +77,7 @@ class GraphView {
   formatNode(node) {
     return Object.assign(
       {}, node, {level: (node.level === undefined)
-                        ? this.level
+                        ? this.zoomLevel
                         : node.level}
     )
   }

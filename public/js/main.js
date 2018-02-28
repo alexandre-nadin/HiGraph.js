@@ -22,11 +22,11 @@ NAVIGATION_SELECTION.append("button")
 NAVIGATION_SELECTION.append("button")
   .attr("id", "zoom-out-button")
   .html("Zoom-Out")
-  .on("click", increaseLevel);
+  .on("click", increaseZoomLevel);
 NAVIGATION_SELECTION.append("button")
   .attr("id", "zoom-in-button")
   .html("Zoom-In")
-  .on("click", decreaseLevel);
+  .on("click", decreaseZoomLevel);
 
 // Neighbor level
 NAVIGATION_SELECTION.append("button")
@@ -92,58 +92,57 @@ function zoomActions() {
   currentTransform = d3.event.transform;
 }
 
+function setD3SelectionDisabled(selection, bool=true) {
+  d3.selectAll(selection).attr("disabled", bool);
+}
+
 // REFRESH
 function refresh() {
-  d3.selectAll("input,button").attr("disabled", true);
-  if(GRAPH_VIEW.root == null) {
-    d3.selectAll("input,button").attr("disabled", null);
-    return;
-  }
+  let isToUpdate = !(GRAPH_VIEW.root === null)
+  setD3SelectionDisabled("input,button", isToUpdate)
+  if (!isToUpdate) return null
+
   SVG_SELECTION.call(ZOOM.transform, d3.zoomIdentity);
   getData(GRAPH_VIEW.getFormattedRoot())
 }
 
 // ZOOM IN
-function decreaseLevel() {
-  d3.selectAll("input,button").attr("disabled", true);
-  if ( GRAPH_VIEW.level == 0 || GRAPH_VIEW.root == null) {
-    d3.selectAll("input,button").attr("disabled", null);
-    return;
-  }
-  GRAPH_VIEW.decreaseLevel();
+function decreaseZoomLevel() {
+  let isToUpdate = !(  GRAPH_VIEW.root === null
+                    || GRAPH_VIEW.decreaseZoomLevel() === null)
+  setD3SelectionDisabled("input,button", isToUpdate)
+  if (!isToUpdate) return null
+
   getData(GRAPH_VIEW.getFormattedRoot());
 }
 
 // ZOOM OUT
-function increaseLevel() {
-  d3.selectAll("input,button").attr("disabled", true);
-  if(GRAPH_VIEW.root == null) {
-    d3.selectAll("input,button").attr("disabled", null);
-    return;
-  }
-  GRAPH_VIEW.increaseLevel();
+function increaseZoomLevel() {
+  let isToUpdate = !(  GRAPH_VIEW.root === null
+                    || GRAPH_VIEW.increaseZoomLevel() === null)
+  setD3SelectionDisabled("input,button", isToUpdate)
+  if (!isToUpdate) return null
+
   getData(GRAPH_VIEW.getFormattedRoot());
 }
 
 // Neighbor --
 function decreaseNeighborLevel() {
-  d3.selectAll("input,button").attr("disabled", true);
-  if(GRAPH_VIEW.root == null || GRAPH_VIEW.neighborLevel == 0) {
-    d3.selectAll("input,button").attr("disabled", null);
-    return;
-  }
-  GRAPH_VIEW.decreaseNeighborLevel();
+  let noUpdate = (  GRAPH_VIEW.root === null
+                    || GRAPH_VIEW.decreaseNeighborLevel() === null)
+  setD3SelectionDisabled("input,button", noUpdate ? null : true)
+  if (noUpdate) return null
+
   getData(GRAPH_VIEW.getFormattedRoot());
 }
 
 // Neighbor ++
 function increaseNeighborLevel() {
-  d3.selectAll("input,button").attr("disabled", true);
-  if(GRAPH_VIEW.root == null) {
-    d3.selectAll("input,button").attr("disabled", null);
-    return;
-  }
-  GRAPH_VIEW.increaseNeighborLevel();
+  let isToUpdate = !(  GRAPH_VIEW.root === null
+                    || GRAPH_VIEW.increaseNeighborLevel() === null)
+  setD3SelectionDisabled("input,button", isToUpdate)
+  if (!isToUpdate) return null
+
   getData(GRAPH_VIEW.getFormattedRoot());
 }
 
@@ -168,15 +167,14 @@ getData((new Node(null, "1", 001, 002)))
 
 // GO
 function go() {
-  d3.selectAll("input,button").attr("disabled", true);
   let inputNode = getInputNode();
+  setD3SelectionDisabled("input,button", (inputNode) ? true : null)
   if(!inputNode) {
     window.alert("Wrong coordinates");
-    d3.selectAll("input,button").attr("disabled", null);
     return;
   }
   SVG_SELECTION.call(ZOOM.transform, d3.zoomIdentity);
-  GRAPH_VIEW.resetLevel();
+  GRAPH_VIEW.resetZoomLevel();
   getData(GRAPH_VIEW.formatNode(inputNode));
 }
 
@@ -204,7 +202,7 @@ function getData(parameters) {
 
   console.log("Rendering from ", loadingDataMode);
   LOADING_DATA_MODES[loadingDataMode](parameters)
-  d3.selectAll('input,button').attr('disabled', null);
+  setD3SelectionDisabled("input,button", null);
 }
 
 function loadDataDatabase(parameters) {
